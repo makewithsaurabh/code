@@ -130,7 +130,7 @@ async function fetchSingleStudent() {
     if (!rollVal) return showToast('Please enter a Roll Number', 'warning');
     
     try {
-        const res = await fetch('http://192.168.1.36:3001/result', {
+        const res = await fetch('/result', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ roll: rollVal, class: clsVal, year: yearVal, stream: streamVal })
@@ -180,7 +180,7 @@ async function startSchoolFetch() {
             const currentRoll = baseRoll + offset;
             
             try {
-                const res = await fetch('http://192.168.1.36:3001/result', {
+                const res = await fetch('/result', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ roll: currentRoll, class: clsVal, year: yearVal, stream: streamVal })
                 });
@@ -225,7 +225,7 @@ async function startSchoolFetch() {
                 
                 
                 try {
-                    const res = await fetch('http://192.168.1.36:3001/result', {
+                    const res = await fetch('/result', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ roll: r, class: clsVal, year: yearVal, stream: streamVal })
                     });

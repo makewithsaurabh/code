@@ -3,7 +3,7 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const qs = require('qs');
 const cors = require('cors');
-
+const path = require('path');
 const compression = require('compression');
 
 const app = express();
@@ -16,6 +16,9 @@ app.use((req, res, next) => {
     res.setHeader('X-Powered-By', 'Dev Saurabh Result Portal (V9.2)');
     next();
 });
+
+// Serve Static Files (Unified App)
+app.use(express.static(path.join(__dirname, './')));
 
 
 // =========================
@@ -188,7 +191,7 @@ function parseResult(html) {
 
 
 // =========================
-// 🔥 API
+// 🔥  API
 // =========================
 app.post('/result', async (req, res) => {
 
