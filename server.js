@@ -53,7 +53,7 @@ async function fetchResult(roll, cls = '10', year = '2026', stream = 'arts') {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'User-Agent': 'Mozilla/5.0'
             },
-            timeout: 10000 // 10s timeout
+            timeout: 5000 // 5s timeout for Sonic Speed
         }
     );
 
