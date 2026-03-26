@@ -166,6 +166,7 @@ async function startSchoolFetch() {
     resultsArea.classList.add('hidden');
 
     allStudents = [];
+    const fetchedRolls = new Set(); // Track unique roll numbers
     schoolName = "";
     document.getElementById('tableBody').innerHTML = '';
     document.getElementById('ds-school-name').innerText = "Searching School...";
@@ -173,6 +174,7 @@ async function startSchoolFetch() {
     
     try {
         let discoveredStudent = null;
+        let discoveredRoll = null;
 
         // 1. Smart Discovery Logic (+/- 10 Probes)
         const probeOffsets = [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6, -6, 7, -7, 8, -8, 9, -9, 10, -10];
@@ -189,6 +191,7 @@ async function startSchoolFetch() {
 
                 if (data.status === 'success') {
                     discoveredStudent = data.data;
+                    discoveredRoll = currentRoll;
                     if (offset !== 0) {
                         showToast(`Discovered school via nearby Roll: ${currentRoll}`, 'success');
                     }
@@ -207,6 +210,7 @@ async function startSchoolFetch() {
         // 2. Base student identified, setup school context
         discoveredStudent.percentage = discoveredStudent.per;
         allStudents.push(discoveredStudent);
+        fetchedRolls.add(discoveredRoll || baseRoll); // Mark as fetched
         schoolName = discoveredStudent.school || "Specified School";
         document.getElementById('ds-school-name').innerText = schoolName;
         updateDashboard();
@@ -224,6 +228,8 @@ async function startSchoolFetch() {
             for (let i = 1; i <= 100; i++) {
                 const r = baseRoll + (i * direction);
                 
+                // Skip if already found during probe
+                if (fetchedRolls.has(r)) continue;
                 
                 try {
                     const res = await fetch(API_URL, {
@@ -237,8 +243,11 @@ async function startSchoolFetch() {
                         const s = resp.data;
                         s.percentage = s.per;
                         if ((s.school || "").trim().toUpperCase() === baseSchool) {
-                            allStudents.push(s);
-                            updateDashboard();
+                            if (!fetchedRolls.has(r)) {
+                                allStudents.push(s);
+                                fetchedRolls.add(r);
+                                updateDashboard();
+                            }
                         }
                     } else {
                         consecutiveMisses++;
