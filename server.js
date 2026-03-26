@@ -191,7 +191,7 @@ function parseResult(html) {
 
 
 // =========================
-// 🔥  API
+// 🔥 API
 // =========================
 app.post('/result', async (req, res) => {
 
