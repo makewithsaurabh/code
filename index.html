@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RBSE School Wise Result 2026 — 10th & 12th Marksheet | Dev Saurabh</title>
+
+    <!-- SEO & Metadata -->
+    <meta name="description"
+        content="Check Rajasthan Board (RBSE) school-wise result 2026 for Class 10th and 12th. Enter any roll number to instantly view all students' marks, percentage, division and marksheet from your school. Free tool by Dev Saurabh.">
+    <meta name="keywords"
+        content="RBSE result 2026, Rajasthan Board result, school wise result, 10th result 2026, 12th result 2026, RBSE 10th result school wise, RBSE 12th result school wise, roll number result, marksheet download, board exam result Rajasthan, Dev Saurabh">
+    <link rel="icon" href="https://devsaurabh.com/assets/img/rbse.png" type="image/png">
+
+    <!-- Stylesheets -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Noto+Sans:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <!-- Custom Assets -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <nav class="navbar fixed-top">
+        <div class="container">
+            <div class="nav-header-main">
+                <div class="nav-left">
+                    <button class="nav-toggle-btn" onclick="toggleDrawer()"><i class="fas fa-bars"></i></button>
+                    <div class="nav-logo" onclick="location.reload()"><span>India</span>Result</div>
+                </div>
+                <div class="nav-center">
+                    <div class="nav-title">Dev Saurabh</div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="app-drawer-overlay" id="drawerOverlay" onclick="toggleDrawer()"></div>
+    <aside class="app-drawer" id="appDrawer">
+        <div class="drawer-header">
+            <div class="drawer-logo"><span>India</span>Result</div>
+        </div>
+        <nav class="mt-3">
+            <a href="#" class="drawer-nav-item active"><i class="fas fa-home"></i> Home</a>
+            <a href="#" class="drawer-nav-item" onclick="toggleSettings()"><i class="fas fa-sliders-h"></i> Settings</a>
+            <a href="https://t.me/rankguruji" target="_blank" class="drawer-nav-item"><i
+                    class="fab fa-telegram-plane"></i> Telegram</a>
+        </nav>
+    </aside>
+
+    <aside class="side-menu" id="sideMenu">
+        <div class="side-menu-content">
+            <h6 class="text-uppercase fw-bold small text-muted mb-3">Settings</h6>
+            <div class="form-check mb-2"><input type="checkbox" class="form-check-input" id="cfg-personal"
+                    checked><label class="form-check-label small">Show Personal Info</label></div>
+            <div class="form-check mb-3"><input type="checkbox" class="form-check-input" id="cfg-mother"><label
+                    class="form-check-label small">Show Mother's Name</label></div>
+            <button class="btn btn-sm btn-outline-danger w-100" onclick="clearLocalHistory()">Clear History</button>
+        </div>
+    </aside>
+
+    <div class="main-wrapper">
+        <div class="search-card">
+            <div class="search-card-title">Check Result <span class="badge-rbse">2026</span></div>
+            <p class="small text-muted mb-4">Fetch all students' results instantly</p>
+            <div class="row g-3">
+                <div class="col-6 col-md-4">
+                    <label class="small fw-bold text-uppercase d-block mb-1">Class</label>
+                    <div class="custom-select-wrapper" id="classSelectWrapper">
+                        <div class="custom-select-trigger" onclick="toggleCustomSelect('class')">
+                            <span id="classSelectLabel">10th</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="custom-options" id="classOptions">
+                            <div class="custom-option selected" onclick="selectCustomOption('class', '10th', '10th')">
+                                10th</div>
+                            <div class="custom-option" onclick="selectCustomOption('class', '12th', '12th')">12th</div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="classSelect" value="10th">
+                </div>
+                <div class="col-6 col-md-4" id="streamContainer" style="display:none;">
+                    <label class="small fw-bold text-uppercase d-block mb-1">Stream</label>
+                    <div class="custom-select-wrapper" id="streamSelectWrapper">
+                        <div class="custom-select-trigger" onclick="toggleCustomSelect('stream')">
+                            <span id="streamSelectLabel">Arts</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="custom-options" id="streamOptions">
+                            <div class="custom-option selected" onclick="selectCustomOption('stream', 'arts', 'Arts')">
+                                Arts</div>
+                            <div class="custom-option" onclick="selectCustomOption('stream', 'science', 'Science')">
+                                Science</div>
+                            <div class="custom-option" onclick="selectCustomOption('stream', 'commerce', 'Commerce')">
+                                Commerce</div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="streamSelect" value="arts">
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="small fw-bold text-uppercase">Roll Number</label>
+                    <input type="number" class="form-control" id="rollInput" placeholder="Ex: 1154844">
+                </div>
+                <input type="hidden" id="yearSelect" value="2026">
+            </div>
+            <div class="row g-2 mt-3">
+                <div class="col-sm-6"><button class="btn-fetch" onclick="startSchoolFetch()"><i
+                            class="fas fa-school me-2"></i> School Full Result</button></div>
+                <div class="col-sm-6"><button class="btn-fetch btn-fetch-student" onclick="fetchSingleStudent()"><i
+                            class="fas fa-user-graduate me-2"></i> Single Student Result</button></div>
+            </div>
+        </div>
+
+        <div id="globalLoader" class="global-loader hidden">
+            <div class="yt-loader">
+                <svg viewBox="25 25 50 50">
+                    <circle cx="50" cy="50" r="20"></circle>
+                </svg>
+            </div>
+        </div>
+
+        <div id="resultsArea" class="hidden">
+            <div class="school-info-banner">
+                <div class="school-name" id="ds-school-name">(SCHOOL NAME)</div>
+                <div class="mt-2" id="ds-meta-pills"></div>
+            </div>
+
+            <div class="d-flex gap-2 mb-3">
+                <button class="btn btn-sm btn-outline-dark" onclick="window.print()"><i class="fas fa-print"></i>
+                    Print</button>
+                <button class="btn btn-sm btn-outline-success" onclick="exportToExcel()"><i
+                        class="fas fa-file-excel"></i> Excel</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="generatePDF()"><i class="fas fa-file-pdf"></i>
+                    PDF</button>
+            </div>
+
+            <div class="table-card">
+                <div class="student-table-container">
+                    <table class="student-table">
+                        <thead id="tableHead"></thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ADVANCED ANALYTICS SECTION -->
+            <div id="analyticsSection" class="mt-4 hidden">
+                <div class="row g-3">
+                    <!-- Division Summary -->
+                    <div class="col-12">
+                        <div class="summary-card">
+                            <div class="summary-card-header">
+                                <i class="fas fa-poll-h me-2"></i> RESULT SUMMARY
+                            </div>
+                            <div class="summary-card-body p-0">
+                                <table class="summary-stats-table">
+                                    <thead>
+                                        <tr>
+                                            <th>TOTAL</th>
+                                            <th>1ST DIV</th>
+                                            <th>2ND DIV</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="divSummaryBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Subject-wise Summary -->
+                    <div class="col-12">
+                        <div class="summary-card mt-2">
+                            <div class="summary-card-header">
+                                <i class="fas fa-book-open me-2"></i> SUBJECT-WISE RESULT SUMMARY
+                            </div>
+                            <div class="summary-card-body p-0 overflow-auto">
+                                <table class="summary-stats-table analytics-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-start">SUBJECT</th>
+                                            <th>TOTAL</th>
+                                            <th>1ST DIV</th>
+                                            <th>2ND DIV</th>
+                                            <th>3RD DIV</th>
+                                            <th>TH&lt;40%</th>
+                                            <th>DIST.</th>
+                                            <th>SUPP.</th>
+                                            <th>FAIL</th>
+                                            <th>ABSENT</th>
+                                            <th>PASS %</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="subjectSummaryBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Class Toppers -->
+                    <div class="col-12">
+                        <div class="summary-card mt-2">
+                            <div class="summary-card-header">
+                                <i class="fas fa-trophy me-2 text-warning"></i> CLASS TOPPERS
+                            </div>
+                            <div class="summary-card-body p-0 overflow-auto">
+                                <table class="summary-stats-table analytics-table">
+                                    <thead>
+                                        <tr>
+                                            <th>RANK</th>
+                                            <th>ROLL NO.</th>
+                                            <th class="text-start">NAME</th>
+                                            <th class="text-start">FATHER'S NAME</th>
+                                            <th>TOTAL MARKS</th>
+                                            <th>PERCENTAGE</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="topperList"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STUDENT MODAL -->
+    <div class="marksheet-overlay" id="msOverlay" onclick="closeMS(event)">
+        <div class="marksheet-card" id="msCard" onclick="event.stopPropagation()">
+            <div class="ms-watermark">Tg:-@Saurabhdev_Official</div>
+            <div class="marksheet-header text-center">
+                <div class="ms-board">RAJASTHAN BOARD OF SECONDARY EDUCATION — 2026</div>
+                <div class="ms-school" id="ms-school-name">(SCHOOL NAME)</div>
+                <div class="ms-class-year" id="ms-class-label">Class: 10th</div>
+            </div>
+
+            <div class="marksheet-body">
+                <div class="ms-student-info">
+                    <div class="ms-info-row">
+                        <div class="ms-info-label">Name</div>
+                        <div class="ms-info-value" id="ms-st-name">NAME</div>
+                    </div>
+                    <div class="ms-info-row">
+                        <div class="ms-info-label">Roll No.</div>
+                        <div class="ms-info-value" id="ms-st-roll">112233</div>
+                    </div>
+                    <div class="ms-info-row">
+                        <div class="ms-info-label">Father's Name</div>
+                        <div class="ms-info-value" id="ms-st-father">FATHER</div>
+                    </div>
+                    <div class="ms-info-row">
+                        <div class="ms-info-label">Mother's Name</div>
+                        <div class="ms-info-value" id="ms-st-mother">MOTHER</div>
+                    </div>
+                </div>
+
+                <table class="ms-table">
+                    <thead>
+                        <tr>
+                            <th>Subject</th>
+                            <th>Theory</th>
+                            <th>Sessional</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ms-marks-body"></tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3">Total Marks</td>
+                            <td id="ms-total">0</td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <div class="ms-result-bar">
+                    <div class="ms-stat">
+                        <div class="ms-stat-val" id="ms-stat-total">0</div>
+                        <div class="ms-stat-label">Total</div>
+                    </div>
+                    <div class="ms-divider"></div>
+                    <div class="ms-stat">
+                        <div class="ms-stat-val" id="ms-stat-per">0%</div>
+                        <div class="ms-stat-label">Percentage</div>
+                    </div>
+                    <div class="ms-divider"></div>
+                    <div class="ms-stat">
+                        <div class="ms-stat-val ms-res-text" id="ms-res">Result</div>
+                        <div class="ms-stat-label">Result</div>
+                    </div>
+                </div>
+            </div> <!-- marksheet-body End -->
+        </div> <!-- msCard End (Captured Area) -->
+
+        <div data-html2canvas-ignore class="p-3 bg-white bg-opacity-10 d-flex gap-2 justify-content-center mt-2 border-top border-white border-opacity-10 w-100" style="max-width: 520px;">
+            <button class="ms-download-btn" onclick="downloadMSImage()"><i class="fas fa-download me-2"></i>
+                Download Marksheet</button>
+            <button class="ms-close-overlay-btn" onclick="closeMS()"><i class="fas fa-times me-2"></i>
+                Close</button>
+        </div>
+    </div>
+
+    <!-- ERROR POPUP MODAL -->
+    <div class="error-overlay" id="errorOverlay" onclick="closeErrorPopup()">
+        <div class="error-card" onclick="event.stopPropagation()">
+            <div class="error-header">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Action Required</span>
+            </div>
+            <div class="error-body" id="errorPopupMsg">
+                Check roll number and try again.
+            </div>
+            <div class="error-footer">
+                <button class="btn-error-close" onclick="closeErrorPopup()">Okay, Got it</button>
+            </div>
+        </div>
+    </div>
+
+    <a id="telegramBtn" href="https://t.me/devsaurabh_official" target="_blank"><i
+            class="fab fa-telegram-plane"></i></a>
+
+    <footer>Developed by <strong>Dev Saurabh</strong> — Professional Developer | <strong>DevSaurabh.com</strong>
+    </footer>
+
+    <!-- Custom Script -->
+    <!-- TOAST NOTIFICATIONS -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="script.js?v=9.6.5"></script>
+</body>
+
+</html>
