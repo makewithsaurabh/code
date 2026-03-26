@@ -5,6 +5,9 @@ const qs = require('qs');
 const cors = require('cors');
 const path = require('path');
 const compression = require('compression');
+const rateLimit = require('express-rate-limit');
+
+const resultsCache = new Map(); // L1 In-Memory Cache
 
 const app = express();
 app.use(compression());
@@ -13,9 +16,17 @@ app.use(cors());
 
 // Custom Powered By
 app.use((req, res, next) => {
-    res.setHeader('X-Powered-By', 'Dev Saurabh Result Portal (V9.8)');
+    res.setHeader('X-Powered-By', 'Dev Saurabh Ultimate Scaler (V10.0)');
     next();
 });
+
+// Rate Limiting (Prevent Spam)
+const limiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 100,
+    message: { status: 'error', message: 'Too many requests, chill out!' }
+});
+app.use('/result', limiter);
 
 // Serve Static Files (Unified App)
 app.use(express.static(path.join(__dirname, './')));
@@ -132,6 +143,12 @@ app.post('/result', async (req, res) => {
     const { roll, class: cls = '10', year = '2026', stream = 'arts' } = req.body;
     if (!roll) return res.json({ status: 'error', message: 'Roll required' });
 
+    const cacheKey = `${roll}_${cls}_${year}_${stream}`;
+    if (resultsCache.has(cacheKey)) {
+        console.log(`[CACHE HIT] ⚡ Roll ${roll}`);
+        return res.json({ status: 'success', data: resultsCache.get(cacheKey) });
+    }
+
     const startTime = new Date().toLocaleTimeString();
     try {
         const html = await fetchResult(roll, cls, year, stream);
@@ -143,6 +160,8 @@ app.post('/result', async (req, res) => {
         }
 
         const data = result.data;
+        resultsCache.set(cacheKey, data); // Save to L1 Cache
+        
         console.log(`[${startTime}] ✅ Roll ${roll} | ${data.name || 'Unknown'} | ${data.per}%`);
         res.json({ status: 'success', data });
 
