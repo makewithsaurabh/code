@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RBSE Lite v2 - High Speed Fetcher</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root { --rbse-red: #cc0000; --rbse-dark: #1a2b4c; }
+        body { background: #f0f2f5; font-family: 'Inter', sans-serif; color: #333; }
+        .navbar { background: var(--rbse-red); color: white; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .card { border: none; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden; }
+        .btn-primary { background: var(--rbse-red); border: none; font-weight: 600; padding: 12px; }
+        .btn-outline-primary { border-color: var(--rbse-red); color: var(--rbse-red); font-weight: 600; }
+        .btn-outline-primary:hover { background: var(--rbse-red); color: white; }
+        .result-card { background: white; border-left: 5px solid var(--rbse-red); }
+        .status-pass { color: #1d9b07; font-weight: 800; }
+        .status-fail { color: #cc0000; font-weight: 800; }
+        #loader { display: none; }
+        .table-hover tbody tr:hover { background-color: #fff5f5; }
+        .watermark { text-align: center; margin: 40px 0; color: #888; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar mb-4">
+        <div class="container justify-content-center">
+            <h4 class="mb-0"><i class="fas fa-bolt me-2"></i>RBSE LITE v2.0</h4>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row justify-content-center g-4">
+            <!-- Search Control -->
+            <div class="col-lg-5 col-md-6">
+                <div class="card p-4">
+                    <h5 class="mb-3 fw-bold text-center">Fetch Results</h5>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <input type="number" id="rollInput" class="form-control form-control-lg text-center fw-bold" placeholder="Roll Number (e.g. 1154823)">
+                        </div>
+                        <div class="col-6">
+                            <select id="classSelect" class="form-select">
+                                <option value="10">Class 10th</option>
+                                <option value="12">Class 12th</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <select id="streamSelect" class="form-select">
+                                <option value="arts">Arts</option>
+                                <option value="science">Science</option>
+                                <option value="commerce">Commerce</option>
+                            </select>
+                        </div>
+                        <div class="col-12 mt-4 d-flex gap-2">
+                            <button onclick="fetchSingle()" class="btn btn-outline-primary flex-fill">
+                                <i class="fas fa-user me-1"></i> Get Single
+                            </button>
+                            <button onclick="fetchSchool()" class="btn btn-primary flex-fill">
+                                <i class="fas fa-users me-1"></i> Get School
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Single Result View -->
+            <div id="singleArea" class="col-lg-7 col-md-6 d-none">
+                <div class="card p-4 result-card">
+                    <div class="d-flex justify-content-between align-items-start border-bottom pb-2 mb-3">
+                        <div>
+                            <h4 id="sName" class="mb-0 fw-bold">---</h4>
+                            <small class="text-muted">Roll: <span id="sRoll">---</span></small>
+                        </div>
+                        <div class="text-end">
+                            <h2 id="sPer" class="mb-0 fw-bold text-danger">--%</h2>
+                            <span id="sRes" class="badge">---</span>
+                        </div>
+                    </div>
+                    <div class="row text-center mb-3">
+                        <div class="col-4 border-end"><h6>Father</h6><small id="sFather">-</small></div>
+                        <div class="col-4 border-end"><h6>Mother</h6><small id="sMother">-</small></div>
+                        <div class="col-4"><h6>Total</h6><small id="sTotal" class="fw-bold">-</small></div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-0">
+                            <thead class="table-light text-center">
+                                <tr><th>Subject</th><th>Marks</th></tr>
+                            </thead>
+                            <tbody id="sMarks"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- School Table View -->
+            <div id="schoolArea" class="col-12 d-none">
+                <div class="card p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 id="schName" class="mb-0 fw-bold text-danger">Specified School</h5>
+                        <span id="schCount" class="badge bg-dark">0 Students</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle text-center">
+                            <thead class="table-dark">
+                                <tr><th>Roll</th><th>Name</th><th>Total</th><th>%</th><th>Result</th></tr>
+                            </thead>
+                            <tbody id="schTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loader -->
+        <div id="loader" class="text-center my-5">
+            <div class="spinner-grow text-danger" role="status"></div>
+            <p class="mt-2 text-muted fw-bold">Fetching from Render Scale...</p>
+        </div>
+
+        <div class="watermark">
+            Developed with ❤️ by <strong>Dev Saurabh</strong> | V10.0.0
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://code-pu9c.onrender.com/result";
+        let students = [];
+
+        async function fetchSingle() {
+            const roll = document.getElementById('rollInput').value;
+            if(!roll) return alert('Enter Roll!');
+            
+            toggleUI('loader');
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ roll: roll, class: val('classSelect'), stream: val('streamSelect'), year: '2026' })
+                });
+                const json = await res.json();
+                if(json.status === 'success') {
+                    showStudent(json.data);
+                    toggleUI('single');
+                } else alert('Not Found!');
+            } catch(e) { alert('Error!'); }
+            finally { document.getElementById('loader').style.display='none'; }
+        }
+
+        async function fetchSchool() {
+            const roll = parseInt(document.getElementById('rollInput').value);
+            if(!roll) return alert('Enter Roll!');
+
+            toggleUI('loader');
+            students = [];
+            document.getElementById('schTable').innerHTML = '';
+
+            try {
+                let baseData = null;
+                const probes = [0, 1, -1, 2, -2, 5, -5];
+                for(let p of probes) {
+                    const res = await fetch(API_URL, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ roll: roll + p, class: val('classSelect'), stream: val('streamSelect'), year: '2026' })
+                    });
+                    const j = await res.json();
+                    if(j.status === 'success') { baseData = j.data; break; }
+                }
+
+                if(!baseData) { alert('School Not Found!'); return; }
+                
+                document.getElementById('schName').innerText = (baseData.school || "School Results").toUpperCase();
+                toggleUI('school');
+                const school = (baseData.school || "").trim().toUpperCase();
+
+                const fetchBatch = async (dir) => {
+                    let misses = 0;
+                    for(let i=0; i<50; i++) {
+                        const r = roll + (i * dir);
+                        try {
+                            const res = await fetch(API_URL, {
+                                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ roll: r, class: val('classSelect'), stream: val('streamSelect'), year: '2026' })
+                            });
+                            const j = await res.json();
+                            if(j.status === 'success' && (j.data.school || "").trim().toUpperCase() === school) {
+                                misses = 0;
+                                addStudentTable(j.data);
+                            } else misses++;
+                        } catch(e) { misses++; }
+                        if(misses >= 10) break;
+                    }
+                };
+                await Promise.all([fetchBatch(1), fetchBatch(-1)]);
+            } catch(e) { alert('Batch Error!'); }
+            finally { document.getElementById('loader').style.display='none'; }
+        }
+
+        function showStudent(s) {
+            document.getElementById('sName').innerText = s.name;
+            document.getElementById('sRoll').innerText = s.roll;
+            document.getElementById('sPer').innerText = s.per + '%';
+            document.getElementById('sFather').innerText = s.father;
+            document.getElementById('sMother').innerText = s.mother;
+            document.getElementById('sTotal').innerText = s.total;
+            document.getElementById('sRes').innerText = s.result;
+            document.getElementById('sRes').className = 'badge bg-' + (s.result.toLowerCase().includes('fail') ? 'danger' : 'success');
+            document.getElementById('sMarks').innerHTML = (s.marks || []).map(m => `<tr><td>${m.subject}</td><td class="text-center">${m.total}</td></tr>`).join('');
+        }
+
+        function addStudentTable(s) {
+            if(students.some(st => st.roll === s.roll)) return;
+            students.push(s);
+            students.sort((a,b) => a.roll - b.roll);
+            document.getElementById('schCount').innerText = `${students.length} Students`;
+            document.getElementById('schTable').innerHTML = students.map(s => `
+                <tr>
+                    <td>${s.roll}</td>
+                    <td class="text-start">${s.name}</td>
+                    <td>${s.total}</td>
+                    <td class="fw-bold text-success">${s.per}%</td>
+                    <td class="${s.result.toLowerCase().includes('fail') ? 'status-fail' : 'status-pass'}">${s.result}</td>
+                </tr>
+            `).join('');
+        }
+
+        function toggleUI(mode) {
+            document.getElementById('loader').style.display = (mode === 'loader' ? 'block' : 'none');
+            document.getElementById('singleArea').classList.toggle('d-none', mode !== 'single');
+            document.getElementById('schoolArea').classList.toggle('d-none', mode !== 'school');
+        }
+        function val(id) { return document.getElementById(id).value; }
+    </script>
+</body>
+</html>
