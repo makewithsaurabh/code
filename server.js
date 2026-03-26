@@ -23,7 +23,7 @@ app.use((req, res, next) => {
 // Rate Limiting (Prevent Spam)
 const limiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minute
-    max: 100,
+    max: 500, // Increased for 200+ student school fetches
     message: { status: 'error', message: 'Too many requests, chill out!' }
 });
 app.use('/result', limiter);
