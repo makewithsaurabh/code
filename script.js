@@ -265,8 +265,12 @@ async function startSchoolFetch() {
         };
 
         loader.classList.remove('hidden'); // Show for batch progress
-        await fetchDirection(1);  // Sweep up
-        await fetchDirection(-1); // Sweep down
+        
+        // V11.0.0 Sonic Speed: Parallel Directional Sweeps
+        await Promise.all([
+            fetchDirection(1),  // Sweep UP
+            fetchDirection(-1)  // Sweep DOWN
+        ]);
 
     } catch (e) {
         console.error(e);
