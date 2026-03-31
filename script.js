@@ -1,7 +1,9 @@
 let allStudents = [];
 let schoolName = "";
-// 🔥 SMART API ROUTING: Pointing to LOCAL V14 Upgraded Backend
-const API_URL = "http://localhost:3001/result";
+// 🔥 SMART API ROUTING: Pointing to LOCAL V14// 📡 ELITE API CONFIGURATION (Smart-Switch Engine)
+const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') 
+    ? 'http://localhost:3001/result' 
+    : '/result';
 
 // ── UTILITIES ──
 function showErrorPopup(msg) {
