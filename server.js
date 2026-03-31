@@ -12,6 +12,16 @@ const mongoose = require('mongoose');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// --- 🌐 GLOBAL STATE & UA POOL ---
+let isDatabaseConnected = false;
+const USER_AGENTS = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0'
+];
+
 // --- ⚡ PERFORMANCE & STATIC SERVING ---
 app.use(compression());
 app.use(express.json());
@@ -33,12 +43,19 @@ const apiLimiter = rateLimit({
     legacyHeaders: false,
 });
 
-// --- 🗄️ MONGODB CONNECTION ---
+// --- 🗄️ MONGODB CONNECTION (Resilient Sync) ---
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/rbse_portal";
-mongoose.connect(MONGODB_URI)
-    .then(async () => {
+
+const connectDB = async () => {
+    try {
+        await mongoose.connect(MONGODB_URI, {
+            serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of hanging
+            connectTimeoutMS: 10000,
+        });
+        isDatabaseConnected = true;
         console.log('✅ MongoDB Connected Successfully');
-        // 🧹 AUTO-CLEANUP: Wipe existing garbage data (Total=0 or Broken names)
+
+        // 🧹 AUTO-CLEANUP: Wipe existing garbage data
         const deleted = await Student.deleteMany({ 
             $or: [
                 { total: 0 }, 
@@ -48,8 +65,15 @@ mongoose.connect(MONGODB_URI)
             ] 
         });
         if (deleted.deletedCount > 0) console.log(`🧹 DATABASE CLEANED: Removed ${deleted.deletedCount} garbage records.`);
-    })
-    .catch(err => console.error('❌ MongoDB Connection Error:', err));
+    } catch (err) {
+        isDatabaseConnected = false;
+        console.error('⚠️ [DB ERROR] MongoDB Connection Failed:', err.message);
+        console.warn('🚀 BACKEND: Running in [Scraping-only] mode. Cache/Queue history disabled.');
+    }
+};
+
+// Initial non-blocking connection attempt
+connectDB();
 
 // --- 📜 DATABASE SCHEMA (STUDENT MODEL) ---
 const StudentSchema = new mongoose.Schema({
@@ -121,6 +145,7 @@ function getTargetURL(roll, cls = '10', year = '2026', stream = 'science') {
 
 async function fetchResultData(roll, cls, year = '2026', stream = 'science') {
     const { url, referer } = getTargetURL(roll, cls, year, stream);
+    const randomUA = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
     
     try {
         const response = await axios.post(
@@ -129,16 +154,23 @@ async function fetchResultData(roll, cls, year = '2026', stream = 'science') {
             {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                    'Referer': referer
+                    'User-Agent': randomUA,
+                    'Referer': referer,
+                    'Origin': 'https://indiaresults.com'
                 },
                 timeout: 30000 
             }
         );
         return { html: response.data, cls };
     } catch (err) {
-        console.error(`[SCRAPER] Fetch failed for ${roll}: ${err.message}`);
-        throw err;
+        let errorMsg = `[SCRAPER] Fetch failed for ${roll}: ${err.message}`;
+        if (err.response) {
+            errorMsg += ` (Status: ${err.response.status} - Datacenter/Bot Block suspected)`;
+        } else if (err.request) {
+            errorMsg += ` (Board Source Unresponsive)`;
+        }
+        console.error(errorMsg);
+        throw new Error(errorMsg);
     }
 }
 
@@ -257,15 +289,19 @@ app.post('/result', apiLimiter, async (req, res) => {
     }
 
     // LAYER 2: MongoDB Check
-    try {
-        const dbResult = await Student.findOne({ roll, class: cls, year, stream });
-        if (dbResult) {
-            console.log(`[L2] DB Hit: ${roll}`);
-            RESULTS_CACHE.set(cacheKey, dbResult);
-            return res.json({ status: 'success', data: dbResult });
+    if (isDatabaseConnected) {
+        try {
+            const dbResult = await Student.findOne({ roll, class: cls, year, stream });
+            if (dbResult) {
+                console.log(`[L2] DB Hit: ${roll}`);
+                RESULTS_CACHE.set(cacheKey, dbResult);
+                return res.json({ status: 'success', data: dbResult });
+            }
+        } catch (e) {
+            console.error("DB Query Error:", e.message);
         }
-    } catch (e) {
-        console.error("DB Query Error:", e);
+    } else {
+        console.warn(`[L2] Skipping DB Check (Database Offline): ${roll}`);
     }
 
     // LAYER 3: Scraper Queue
@@ -291,13 +327,19 @@ app.post('/result', apiLimiter, async (req, res) => {
                     const isGarbage = (finalData.name && finalData.name.toUpperCase().includes('MARKS OBTAINED')) || finalData.total <= 0;
                     
                     if (finalData.name && finalData.roll && !isGarbage) {
-                        await Student.findOneAndUpdate(
-                            { roll, class: cls, year, stream },
-                            finalData,
-                            { upsert: true, new: true }
-                        );
+                        if (isDatabaseConnected) {
+                            try {
+                                await Student.findOneAndUpdate(
+                                    { roll, class: cls, year, stream },
+                                    finalData,
+                                    { upsert: true, new: true }
+                                );
+                                console.log(`[SAVER] Correct Data Stored: ${finalData.name} (${roll})`);
+                            } catch (writeErr) {
+                                console.error(`[SAVER] DB Write Error: ${writeErr.message}`);
+                            }
+                        }
                         RESULTS_CACHE.set(cacheKey, finalData);
-                        console.log(`[SAVER] Correct Data Stored: ${finalData.name} (${roll})`);
                     } else {
                         console.warn(`[SAVER] Garbage Filtered Out for ${roll}`);
                     }
